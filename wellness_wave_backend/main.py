@@ -22,14 +22,8 @@ except Exception as e:
     print(f"Firebase initialization failed: {e}. Running in mock mode.")
     db = None
 
-# Load ML Model
-try:
-    with open("behavioral_ensemble_v2.pkl", "rb") as f:
-        ml_models = pickle.load(f)
-    print("V2 AI Model Ensemble loaded successfully!")
-except Exception as e:
-    print(f"ML Model failed to load: {e}")
-    ml_models = None
+from api.prediction import router as prediction_router
+app.include_router(prediction_router)
 
 class UsageMetrics(BaseModel):
     user_id: str
@@ -69,78 +63,6 @@ async def submit_daily_data(metrics: UsageMetrics):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/prediction")
-async def get_prediction(user_id: str):
-    if not ml_models:
-        return {
-            "user_id": user_id,
-            "date_evaluated": datetime.now().strftime("%Y-%m-%d"),
-            "stress_level": "Medium",
-            "anxiety_detected": False,
-            "burnout_detected": False,
-            "addiction_detected": False,
-            "real_time_feedback": "Model offline. Returning default state."
-        }
-    
-    # Try to fetch latest data from Firebase. If no db, use default baseline.
-    features = {
-        'screen_time': [4.0], 'unlock_count': [30], 'night_ratio': [0.1], 
-        'scrolling_speed_avg': [40.0], 'scroll_erraticness': [0.3], 
-        'app_switch_count_per_hour': [10], 'typing_cps': [5.0], 
-        'typing_hesitation_ms': [300], 'typing_pauses_count': [5], 
-        'max_typing_pause_ms': [2000], 'notification_response_sec': [15.0]
-    }
-    
-    if db:
-        try:
-            docs = db.collection("users").document(user_id).collection("daily_metrics").order_by("date", direction=firestore.Query.DESCENDING).limit(1).stream()
-            metrics = next(docs, None)
-            if metrics:
-                data = metrics.to_dict()
-                features = {
-                    'screen_time': [data.get('screen_time', 4.0)],
-                    'unlock_count': [data.get('unlock_count', 30)],
-                    'night_ratio': [data.get('night_ratio', 0.1)],
-                    'scrolling_speed_avg': [data.get('scrolling_speed_avg', 40.0)],
-                    'scroll_erraticness': [data.get('scroll_erraticness', 0.3)],
-                    'app_switch_count_per_hour': [data.get('app_switch_count_per_hour', 10)],
-                    'typing_cps': [data.get('typing_cps', 5.0)],
-                    'typing_hesitation_ms': [data.get('typing_hesitation_ms', 300)],
-                    'typing_pauses_count': [data.get('typing_pauses_count', 5)],
-                    'max_typing_pause_ms': [data.get('max_typing_pause_ms', 2000)],
-                    'notification_response_sec': [data.get('notification_response_sec', 15.0)]
-                }
-        except Exception as e:
-            print(f"Error fetching data from Firebase: {e}")
-            
-    # Perform Prediction
-    df_features = pd.DataFrame(features)
-    
-    stress_pred = ml_models['stress'].predict(df_features)[0]
-    anxiety_pred = bool(ml_models['anxiety'].predict(df_features)[0])
-    burnout_pred = bool(ml_models['burnout'].predict(df_features)[0])
-    addiction_pred = bool(ml_models['addiction'].predict(df_features)[0])
-    
-    # Generate dynamic feedback based on combination
-    feedback = "Metrics indicate steady, calm usage. Keep it up!"
-    if burnout_pred:
-        feedback = "Critical burnout risk detected. Complete disconnect is advised."
-    elif anxiety_pred:
-        feedback = "High arousal patterns detected. Try a 2-minute breathing exercise."
-    elif addiction_pred:
-        feedback = "Screen time and unlock intensity are very high. Consider setting app limits."
-    elif stress_pred == "High":
-        feedback = "Elevated stress detected. Please take a break."
-        
-    return {
-        "user_id": user_id,
-        "date_evaluated": datetime.now().strftime("%Y-%m-%d"),
-        "stress_level": stress_pred,
-        "anxiety_detected": anxiety_pred,
-        "burnout_detected": burnout_pred,
-        "addiction_detected": addiction_pred,
-        "real_time_feedback": feedback
-    }
 
 @app.get("/history")
 async def get_history(user_id: str):

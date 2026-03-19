@@ -1,0 +1,59 @@
+{
+  "model_name": "StressLevelPredictor_v1",
+  "features": [
+    "screen_time_minutes",
+    "unlock_count",
+    "night_usage_minutes",
+    "social_media_usage_ratio",
+    "average_session_duration",
+    "app_switch_frequency"
+  ],
+  "classes": [
+    "Low",
+    "Medium",
+    "High"
+  ],
+  "preprocessing": {
+    "imputer_strategy": "median",
+    "imputer_statistics": [
+      182.1798829874404,
+      50.266694675087216,
+      21.736819370672293,
+      0.32128298177833403,
+      6.4854095450214775,
+      13.787274622767846
+    ],
+    "scaler_mean": [
+      195.20770163155262,
+      57.168610912403004,
+      27.137192963638988,
+      0.34485315772053404,
+      6.9563300097552645,
+      16.580206618485875
+    ],
+    "scaler_scale": [
+      105.84526115424242,
+      38.434323568560586,
+      24.219004211149915,
+      0.19767799431800406,
+      3.323168433226396,
+      12.92720321309283
+    ]
+  },
+  "sklearn_estimator": "RandomForestClassifier",
+  "performance": {
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "roc_auc": 1.0,
+    "cv_f1_mean": 0.998181104966344,
+    "cv_f1_std": 0.001993185486396714,
+    "best_params": {
+      "n_estimators": 150,
+      "min_samples_split": 4,
+      "min_samples_leaf": 1,
+      "max_depth": 10
+    }
+  }
+}
